@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/janbialostok/stateify.git.git"
+    "url": "git+https://github.com/janbialostok/stateify.git"
   },
   "keywords": [
     "state",
