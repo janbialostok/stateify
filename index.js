@@ -1,52 +1,46 @@
 'use strict';
 
-const STATE = class State {
-  constructor (initial_state = {}) {
-    this.state = Object.assign({}, initial_state);
-  }
-  inspect () {
-    return Object.assign({}, this.state);
-  }
-  copy () {
-    return STATEIFY(Object.assign({}, this.state));
-  }
-};
-
-const GET = function (target, property) {
-  if (property === '_inspect') return target.inspect.bind(target);
-  else if (property === '_copy') return target.copy.bind(target);
-  else {
-    if (target.state[property] && typeof target.state[property] === 'object') {
-      let value = target.state[property];
-      delete target.state[property];
-      target.state[property] = Object.assign({}, value);
+const toObject = function (parent = {}) {
+  let _parent = parent;
+  return Object.keys(_parent).reduce((result, key) => {
+    if (_parent[key][Symbol.species] === '_state_') result[key] = _parent[key].toObject();
+    else {
+      if (_parent[key] && typeof _parent[key] === 'object') result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
+      else result[key] = _parent[key];
     }
-    return target.state[property];
-  }
+    return result;
+  }, (Array.isArray(_parent) ? [] : {}));
 };
 
-const SET = function (target, property, value) {
-  if (['_copy','_inspect'].indexOf('property') !== -1) return false;
-  let state = Object.assign({}, target.state);
-  state[property] = value;
-  target.state = state;
-  return true;
-};
-
-const DELETE = function (target, property) {
-  if (['_copy','_inspect'].indexOf('property') !== -1) return false;
-  let state = Object.assign({}, target.state);
-  delete state[property];
-  target.state = state;
-  return true;
-};
-
-const STATEIFY = function stateify (data) {
-  return new Proxy(new STATE(data), {
-    get: GET,
-    set: SET,
-    deleteProperty: DELETE
+const STATEIFY = function (parent = {}, isArray = false) {
+  let _parent = Object.assign((isArray) ? [] : {}, parent);
+  _parent[Symbol.species] = '_state_';
+  let proxy = new Proxy((isArray) ? [] : {}, {
+    get: function (target, property) {
+      if (property === 'inspect') return _parent;
+      if (property === 'toJSON') return () => JSON.stringify(_parent);
+      if (property === 'toObject') return toObject.bind(null, _parent);
+      if (_parent[property] && typeof _parent[property] === 'object') {
+        if (_parent[property][Symbol.species] === '_state_') return _parent[property];
+        _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
+        return _parent[property];
+      }
+      else return _parent[property];
+    },
+    set: function (target, property, value) {
+      if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
+      _parent = Object.assign((Array.isArray(_parent) ? [] : {}), _parent, { [property]: value });
+      return true;
+    },
+    deleteProperty: function (target, property) {
+      if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
+      _parent = Object.assign(Array.isArray(_parent[property]) ? [] : {}, _parent);
+      delete _parent[property];
+      return true;
+    }
   });
+  proxy[Symbol.toStringTag] = JSON.stringify(_parent);
+  return proxy;
 };
 
 module.exports = STATEIFY;
