@@ -39,13 +39,13 @@ const setIgnore = function (toIgnore = {}) {
 const STATEIFY = function (parent = {}, isArray = false) {
   let _parent = Object.assign((isArray) ? [] : {}, parent);
   _parent[Symbol.species] = '_state_';
-  let proxy = new Proxy((isArray) ? [] : {}, {
+  return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
       if (property === 'inspect') return _parent;
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
       if (_parent[property] && typeof _parent[property] === 'object') {
-        if (_parent[property][Symbol.species] === '_state_' || _parent[property][Symbol.for('ignore')]) return _parent[property];
+        if (_parent[property][Symbol.species] === '_state_' || _parent[property][SYMBOL_IGNORE]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
         return _parent[property];
       }
@@ -63,7 +63,6 @@ const STATEIFY = function (parent = {}, isArray = false) {
       return true;
     }
   });
-  return proxy;
 };
 
 module.exports = STATEIFY;
