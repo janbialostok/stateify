@@ -1,4 +1,5 @@
 'use strict';
+const SYMBOL_IGNORE = Symbol('ignore');
 
 /**
  * Converts a state-ified object back into a normal JS object
@@ -18,6 +19,18 @@ const toObject = function (parent = {}) {
 };
 
 /**
+ * Sets a non-enumerable "ignore" property on an object which specifies that the field should never be treated as a "state"
+ * @param {Object} toIgnore An object that should never be converted into a state
+ */
+const setIgnore = function (toIgnore = {}) {
+  Object.defineProperty(toIgnore, SYMBOL_IGNORE, {
+    value: true,
+    enumerable: false
+  });
+  return toIgnore;
+};
+
+/**
  * Converts an object into an immutable "state" object which will never be directly manipulated but instead creates a new copy as necessary when a set, delete or get trap is triggered
  * @param {Object}  parent  The object to be converted
  * @param {Boolean} isArray Specifies that the object being converted is an Array. Must be true in order to properly handle arrays as they will be converted into non-iterable objects if isArray argument is not specified
@@ -32,7 +45,7 @@ const STATEIFY = function (parent = {}, isArray = false) {
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
       if (_parent[property] && typeof _parent[property] === 'object') {
-        if (_parent[property][Symbol.species] === '_state_') return _parent[property];
+        if (_parent[property][Symbol.species] === '_state_' || _parent[property][Symbol.for('ignore')]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
         return _parent[property];
       }
@@ -54,3 +67,4 @@ const STATEIFY = function (parent = {}, isArray = false) {
 };
 
 module.exports = STATEIFY;
+module.exports.setIgnore = setIgnore;
