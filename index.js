@@ -1,6 +1,6 @@
 'use strict';
-const SYMBOL_IGNORE = Symbol('ignore');
-const SYMBOL_STATE = Symbol.for('is_state');
+const SYMBOL_IGNORE = ((global && global.Symbol) || (window && window.Symbol)) ? Symbol('ignore') : '__ignore__';
+const SYMBOL_STATE = ((global && global.Symbol) || (window && window.Symbol)) ? Symbol.for('is_state') : '__is_state__';
 
 /**
  * Converts a state-ified object back into a normal JS object
@@ -39,7 +39,10 @@ const setIgnore = function (toIgnore = {}) {
  */
 const STATEIFY = function (parent = {}, isArray = false) {
   let _parent = Object.assign((isArray) ? [] : {}, parent);
-  _parent[SYMBOL_STATE] = '_state_';
+  Object.defineProperty(_parent, SYMBOL_STATE, {
+    value: '_state_',
+    enumerable: false
+  });
   return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
       if (property === 'inspect') return _parent;
