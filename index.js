@@ -1,6 +1,6 @@
 'use strict';
-const SYMBOL_IGNORE = ((global && global.Symbol) || (window && window.Symbol)) ? Symbol('ignore') : '__ignore__';
-const SYMBOL_STATE = ((global && global.Symbol) || (window && window.Symbol)) ? Symbol.for('is_state') : '__is_state__';
+const SYMBOL_IGNORE = Symbol('ignore');
+const SYMBOL_STATE = Symbol.for('is_state');
 
 /**
  * Converts a state-ified object back into a normal JS object
@@ -39,10 +39,7 @@ const setIgnore = function (toIgnore = {}) {
  */
 const STATEIFY = function (parent = {}, isArray = false) {
   let _parent = Object.assign((isArray) ? [] : {}, parent);
-  Object.defineProperty(_parent, SYMBOL_STATE, {
-    value: '_state_',
-    enumerable: false
-  });
+  _parent[SYMBOL_STATE] = '_state_';
   return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
       if (property === 'inspect') return _parent;
@@ -57,12 +54,12 @@ const STATEIFY = function (parent = {}, isArray = false) {
     },
     set: function (target, property, value) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent[property] = (value && typeof value === 'object') ? STATEIFY(value, Array.isArray(value)) : value;
+      _parent = Object.assign((Array.isArray(_parent) ? [] : {}), _parent, { [property]: value });
       return true;
     },
     deleteProperty: function (target, property) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign(Array.isArray(_parent[property]) ? [] : {}, _parent);
+      _parent = Object.assign(Array.isArray(_parent) ? [] : {}, _parent);
       delete _parent[property];
       return true;
     }
