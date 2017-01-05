@@ -25,7 +25,7 @@ describe('stateify', function () {
 			expect(state.inspect).to.be.okay;
 			expect(state.toJSON).to.be.okay;
 			expect(state.toObject).to.be.okay;
-			expect(state.inspect[Symbol.species]).to.equal('_state_');
+			expect(state.inspect[Symbol.for('is_state')]).to.equal('_state_');
 		});
 		it('Should be able to access all the properties of the initial object', () => {
 			let state = stateify(EXAMPLE);
@@ -60,7 +60,7 @@ describe('stateify', function () {
 			state.one.fish = 'three';
 			expect(EXAMPLE.one.fish).to.be.an('object');
 			expect(state.one.fish).to.be.a('string');
-			expect(state.one[Symbol.species]).to.equal('_state_');
+			expect(state.one[Symbol.for('is_state')]).to.equal('_state_');
 		});
 		it('Should not re-stateify a field that is already a state', () => {
 			let restateExample = {
@@ -68,7 +68,7 @@ describe('stateify', function () {
 					world: true
 				}
 			};
-			restateExample.hello[Symbol.species] = '_state_';
+			restateExample.hello[Symbol.for('is_state')] = '_state_';
 			let state = stateify(restateExample);
 			expect(state.hello.inspect).to.not.be.ok;
 		});
@@ -97,7 +97,7 @@ describe('stateify', function () {
 			let state = stateify(ignoreExample);
 			state.hello.world = false;
 			expect(state.hello.world).to.equal(ignoreExample.hello.world);
-			expect(state.hello[Symbol.species]).to.not.equal('_state_');
+			expect(state.hello[Symbol.for('is_state')]).to.not.equal('_state_');
 		});
 	});
 });

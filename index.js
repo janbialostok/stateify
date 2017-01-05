@@ -1,5 +1,6 @@
 'use strict';
 const SYMBOL_IGNORE = Symbol('ignore');
+const SYMBOL_STATE = Symbol.for('is_state');
 
 /**
  * Converts a state-ified object back into a normal JS object
@@ -9,7 +10,7 @@ const SYMBOL_IGNORE = Symbol('ignore');
 const toObject = function (parent = {}) {
   let _parent = parent;
   return Object.keys(_parent).reduce((result, key) => {
-    if (_parent[key][Symbol.species] === '_state_') result[key] = _parent[key].toObject();
+    if (_parent[key][SYMBOL_STATE] === '_state_') result[key] = _parent[key].toObject();
     else {
       if (_parent[key] && typeof _parent[key] === 'object') result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
       else result[key] = _parent[key];
@@ -38,14 +39,14 @@ const setIgnore = function (toIgnore = {}) {
  */
 const STATEIFY = function (parent = {}, isArray = false) {
   let _parent = Object.assign((isArray) ? [] : {}, parent);
-  _parent[Symbol.species] = '_state_';
+  _parent[SYMBOL_STATE] = '_state_';
   return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
       if (property === 'inspect') return _parent;
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
       if (_parent[property] && typeof _parent[property] === 'object') {
-        if (_parent[property][Symbol.species] === '_state_' || _parent[property][SYMBOL_IGNORE]) return _parent[property];
+        if (_parent[property][SYMBOL_STATE] === '_state_' || _parent[property][SYMBOL_IGNORE]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
         return _parent[property];
       }
@@ -53,7 +54,7 @@ const STATEIFY = function (parent = {}, isArray = false) {
     },
     set: function (target, property, value) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign((Array.isArray(_parent) ? [] : {}), _parent, { [property]: value });
+      _parent[property] = (value && typeof value === 'object') ? STATEIFY(value, Array.isArray(value)) : value;
       return true;
     },
     deleteProperty: function (target, property) {

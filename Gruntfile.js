@@ -46,7 +46,8 @@ module.exports = function (grunt) {
 	      // When true, grunt-coveralls will only print a warning rather than
 	      // an error, to prevent CI builds from failing unnecessarily (e.g. if
 	      // coveralls.io is down). Optional, defaults to false.
-	      force: false
+	      force: false,
+	      excludes: ['**/bin/**']
 	    },
 
 	    all: {
@@ -86,117 +87,22 @@ module.exports = function (grunt) {
 			}
 		},
 		browserify: {
-			dist: {
-				files: [{
-					expand: true,
-					cwd: 'resources',
-					src: ['**/*_src.js'],
-					dest: 'example',
-					rename: function (dest, src) {
-						var finallocation = path.join(dest, src);
-						finallocation = finallocation.replace('_src', '_build');
-						finallocation = finallocation.replace('resources', 'example');
-						finallocation = path.resolve(finallocation);
-						return finallocation;
-					}
-				}],
-				options: {}
-			}
-		},
-		uglify: {
-			options: {
-				sourceMap: true,
-				compress: {
-					drop_console: false
-				}
-			},
-			all: {
-				files: [{
-					expand: true,
-					cwd: 'example',
-					src: ['**/*_build.js'],
-					dest: 'example',
-					rename: function (dest, src) {
-						var finallocation = path.join(dest, src);
-						finallocation = finallocation.replace('_build', '.min');
-						finallocation = path.resolve(finallocation);
-						return finallocation;
-					}
-				}]
-			}
-		},
-		connect: {
-			server: {
-				options: {
-					index: 'index.html',
-					port: 8181,
-					hostname: '*',
-					base: 'example',
-					debug: true,
-					// open: true,
-					keepalive: true,
-					middleware: function (connect, options, middlewares) {
-						// inject a custom middleware into the array of default middlewares
-						middlewares.unshift(sample_middleware.getdata);
-						return middlewares;
-					}
-				}
-			}
-		},
-		copy: {
-			main: {
-				cwd: 'example',
-				expand: true,
-				src: '**/*.*',
-				dest: '../../public/pushie',
-			},
-		},
-		less: {
-			development: {
-				options: {
-					sourceMap: true,
-					yuicompress: true,
-					sourceMapFileInline: true,
-					compress: true
-				},
-				files: {
-					'example/stylesheets/pushie.css': 'resources/stylesheets/pushie.less',
-					'example/stylesheets/example.css': 'resources/stylesheets/example.less'
-				}
-			}
-		},
-		template: {
-			all: {
-				files: [{
-					expand: true,
-					cwd: 'resources/template',
-					src: ['pages/*.ejs', 'index.ejs', '!shared/**/*.ejs'],
-					dest: 'example',
-					ext: '.html'
-				}],
-				variables: {
-					env: true
-				}
-			}
-		},
-		watch: {
-			scripts: {
-				// files: '**/*.js',
-				files: [
-					'Gruntfile.js',
-					'index.js',
-					'lib/**/*.js',
-					'resources/**/*.js',
-					'resources/**/*.less',
-					'resources/**/*.ejs',
-					'test/**/*.js',
-				],
-				tasks: ['lint', 'packagejs', 'less', 'html', 'test', 'connect' /*'copy', /*'doc',*/ ],
-				options: {
-					interrupt: true
-				}
-			}
-		}
+      dist: {
+        files: [{
+          expand: true,
+          cwd: __dirname,
+          src: ['./index.js'],
+          dest: 'bin'
+        }],
+        options: {
+          transform: [
+            ["babelify", {
+              presets: ["es2015"]
+            }]
+          ]
+        }
+      }
+    }
 	});
 
 
