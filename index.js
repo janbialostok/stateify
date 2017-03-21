@@ -10,7 +10,7 @@ const SYMBOL_STATE = Symbol.for('is_state');
 const toObject = function (parent = {}) {
   let _parent = parent;
   return Object.keys(_parent).reduce((result, key) => {
-    if (_parent[key][SYMBOL_STATE] === '_state_') result[key] = _parent[key].toObject();
+    if (_parent[key] && _parent[key][SYMBOL_STATE] === '_state_') result[key] = _parent[key].toObject();
     else {
       if (_parent[key] && typeof _parent[key] === 'object') result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
       else result[key] = _parent[key];
