@@ -3,6 +3,29 @@ const SYMBOL_IGNORE = Symbol('ignore');
 const SYMBOL_STATE = Symbol.for('is_state');
 
 /**
+ * Determines if value is has an Object or Array constructor to preserve the prototype of classes
+ * @param  {*}  value Any value that should be evaluated
+ * @return {Boolean}       Returns true if value has a Array or Object constructor
+ */
+const isObject = function (value) {
+  if (value && typeof value === 'object') {
+    return (value.constructor === Object || value.constructor === Array);
+  }
+  return false;
+};
+
+const assign = function (isArray, value) {
+  let assignments = [...arguments].slice(2);
+  let isClass = (value && typeof value === 'object' && !isObject(value));
+  let _value;
+  if (isClass) {
+    _value = Object.create(value);
+    _value = Object.assign(_value, value, ...assignments);
+  } else  _value = Object.assign((isArray) ? [] : {}, value, ...assignments);
+  return _value;
+};
+
+/**
  * Converts a state-ified object back into a normal JS object
  * @param  {Object} parent An state-ified object that should be converted
  * @return {Object}        A JS object converted from state-ified object
@@ -12,11 +35,14 @@ const toObject = function (parent = {}) {
   return Object.keys(_parent).reduce((result, key) => {
     if (_parent[key] && _parent[key][SYMBOL_STATE] === '_state_') result[key] = _parent[key].toObject();
     else {
-      if (_parent[key] && typeof _parent[key] === 'object') result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
+      if (_parent[key] && typeof _parent[key] === 'object') {
+        if (isObject(_parent[key])) result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
+        else result[key] = assign(false, _parent[key]);
+      }
       else result[key] = _parent[key];
     }
     return result;
-  }, (Array.isArray(_parent) ? [] : {}));
+  }, (Array.isArray(_parent)) ? [] : Object.create(_parent));
 };
 
 /**
@@ -38,7 +64,7 @@ const setIgnore = function (toIgnore = {}) {
  * @return {Object} Returns a "state" object which is a Proxy that indirectly accesses a copy of the initial object
  */
 const STATEIFY = function (parent = {}, isArray = false) {
-  let _parent = Object.assign((isArray) ? [] : {}, parent);
+  let _parent = assign(Array.isArray(parent), parent);
   _parent[SYMBOL_STATE] = '_state_';
   return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
@@ -54,12 +80,12 @@ const STATEIFY = function (parent = {}, isArray = false) {
     },
     set: function (target, property, value) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign((Array.isArray(_parent) ? [] : {}), _parent, { [property]: value });
+      _parent = assign(Array.isArray(_parent), _parent, { [property]: value });
       return true;
     },
     deleteProperty: function (target, property) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign(Array.isArray(_parent) ? [] : {}, _parent);
+      _parent = assign(Array.isArray(_parent), _parent);
       delete _parent[property];
       return true;
     }

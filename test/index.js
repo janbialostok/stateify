@@ -86,6 +86,19 @@ describe('stateify', function () {
 			expect(EXAMPLE.one).to.deep.equal(state.one);
 		});
 	});
+	describe('Immutability concerning classes', function () {
+		it('Should be able to handle classes without breaking prototype', () => {
+			let date = new Date();
+			let initial = { date, other: 'a' };
+			let state = stateify(initial);
+			state.other = 'b';
+			state.date;
+			state = state.toObject();
+			expect(state.other).to.equal('b');
+			expect(state.other).to.not.equal(initial.other);
+			expect(state.date instanceof Date).to.be.true;
+		});
+	});
 	describe('Setting fields to ignore', function () {
 		it('Should set a non-enumerable ignore property on a property', () => {
 			let ignoreExample = {
