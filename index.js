@@ -32,8 +32,11 @@ const assign = function (isArray, value) {
  */
 const toObject = function (parent = {}) {
   let _parent = parent;
-  return Object.keys(_parent).reduce((result, key) => {
-    if (_parent[key] && _parent[key][SYMBOL_STATE] === '_state_') result[key] = _parent[key].toObject();
+  let converted = Object.keys(_parent).reduce((result, key) => {
+    if (_parent[key] && _parent[key][SYMBOL_STATE] === '_state_') {
+      result[key] = _parent[key].toObject();
+      result[key][SYMBOL_STATE] = false;
+    }
     else {
       if (_parent[key] && typeof _parent[key] === 'object') {
         if (isObject(_parent[key])) result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
@@ -43,6 +46,8 @@ const toObject = function (parent = {}) {
     }
     return result;
   }, (Array.isArray(_parent)) ? [] : Object.create(_parent));
+  converted[SYMBOL_STATE] = false;
+  return converted;
 };
 
 /**
