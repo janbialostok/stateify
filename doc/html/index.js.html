@@ -28,6 +28,36 @@
         <article>
             <pre class="prettyprint source linenums"><code>'use strict';
 const SYMBOL_IGNORE = Symbol('ignore');
+const SYMBOL_STATE = Symbol.for('is_state');
+
+/**
+ * Determines if value is has an Object or Array constructor to preserve the prototype of classes
+ * @param  {*}  value Any value that should be evaluated
+ * @return {Boolean}       Returns true if value has a Array or Object constructor
+ */
+const isObject = function (value) {
+  if (value &amp;&amp; typeof value === 'object') {
+    return (value.constructor === Object || value.constructor === Array);
+  }
+  return false;
+};
+
+/**
+ * Convenience method of doing assignments on objects and will create objects that carry over prototypes for classes
+ * @param  {Boolean} isArray Denotes that an object is an array and therefore Array constructor should be used
+ * @param  {Object}  value   Any object that should be assigned
+ * @return {Object}          The reassigned object value
+ */
+const assign = function (isArray, value) {
+  let assignments = [...arguments].slice(2);
+  let isClass = (value &amp;&amp; typeof value === 'object' &amp;&amp; !isObject(value));
+  let _value;
+  if (isClass) {
+    _value = Object.create(value);
+    _value = Object.assign(_value, value, ...assignments);
+  } else  _value = Object.assign((isArray) ? [] : {}, value, ...assignments);
+  return _value;
+};
 
 /**
  * Converts a state-ified object back into a normal JS object
@@ -36,14 +66,22 @@ const SYMBOL_IGNORE = Symbol('ignore');
  */
 const toObject = function (parent = {}) {
   let _parent = parent;
-  return Object.keys(_parent).reduce((result, key) => {
-    if (_parent[key][Symbol.species] === '_state_') result[key] = _parent[key].toObject();
+  let converted = Object.keys(_parent).reduce((result, key) => {
+    if (_parent[key] &amp;&amp; isState(_parent[key])) {
+      result[key] = _parent[key].toObject();
+      result[key][SYMBOL_STATE] = false;
+    }
     else {
-      if (_parent[key] &amp;&amp; typeof _parent[key] === 'object') result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
+      if (_parent[key] &amp;&amp; typeof _parent[key] === 'object') {
+        if (isObject(_parent[key])) result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
+        else result[key] = assign(false, _parent[key]);
+      }
       else result[key] = _parent[key];
     }
     return result;
-  }, (Array.isArray(_parent) ? [] : {}));
+  }, (Array.isArray(_parent)) ? [] : Object.create(_parent));
+  converted[SYMBOL_STATE] = false;
+  return converted;
 };
 
 /**
@@ -59,21 +97,32 @@ const setIgnore = function (toIgnore = {}) {
 };
 
 /**
+ * Convenience method for determining if value is a "state", "state" Symbol is declared in global registry but is not known to end user
+ * @param  {*}  data Any value that should be evaluated
+ * @return {Boolean}      Returns true if value is a "state"
+ */
+const isState = function (data) {
+  if (!data) return false;
+  return (typeof data === 'object' &amp;&amp; data[SYMBOL_STATE] === '_state_');
+};
+
+/**
  * Converts an object into an immutable "state" object which will never be directly manipulated but instead creates a new copy as necessary when a set, delete or get trap is triggered
  * @param {Object}  parent  The object to be converted
  * @param {Boolean} isArray Specifies that the object being converted is an Array. Must be true in order to properly handle arrays as they will be converted into non-iterable objects if isArray argument is not specified
  * @return {Object} Returns a "state" object which is a Proxy that indirectly accesses a copy of the initial object
  */
 const STATEIFY = function (parent = {}, isArray = false) {
-  let _parent = Object.assign((isArray) ? [] : {}, parent);
-  _parent[Symbol.species] = '_state_';
-  let proxy = new Proxy((isArray) ? [] : {}, {
+  if (isState(parent)) return parent;
+  let _parent = assign(Array.isArray(parent), parent);
+  _parent[SYMBOL_STATE] = '_state_';
+  return new Proxy((isArray) ? [] : {}, {
     get: function (target, property) {
       if (property === 'inspect') return _parent;
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
       if (_parent[property] &amp;&amp; typeof _parent[property] === 'object') {
-        if (_parent[property][Symbol.species] === '_state_' || _parent[property][Symbol.for('ignore')]) return _parent[property];
+        if (isState(_parent[property]) || _parent[property][SYMBOL_IGNORE]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
         return _parent[property];
       }
@@ -81,21 +130,21 @@ const STATEIFY = function (parent = {}, isArray = false) {
     },
     set: function (target, property, value) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign((Array.isArray(_parent) ? [] : {}), _parent, { [property]: value });
+      _parent = assign(Array.isArray(_parent), _parent, { [property]: value });
       return true;
     },
     deleteProperty: function (target, property) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
-      _parent = Object.assign(Array.isArray(_parent[property]) ? [] : {}, _parent);
+      _parent = assign(Array.isArray(_parent), _parent);
       delete _parent[property];
       return true;
     }
   });
-  return proxy;
 };
 
 module.exports = STATEIFY;
 module.exports.setIgnore = setIgnore;
+module.exports.isState = isState;
 </code></pre>
         </article>
     </section>
@@ -106,13 +155,13 @@ module.exports.setIgnore = setIgnore;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#setIgnore">setIgnore</a></li><li><a href="global.html#STATEIFY">STATEIFY</a></li><li><a href="global.html#toObject">toObject</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#assign">assign</a></li><li><a href="global.html#isObject">isObject</a></li><li><a href="global.html#isState">isState</a></li><li><a href="global.html#setIgnore">setIgnore</a></li><li><a href="global.html#STATEIFY">STATEIFY</a></li><li><a href="global.html#toObject">toObject</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Fri Dec 30 2016 14:26:13 GMT-0500 (EST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Fri Mar 24 2017 10:16:33 GMT-0400 (EDT)
 </footer>
 
 <script> prettyPrint(); </script>

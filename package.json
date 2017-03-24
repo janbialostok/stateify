@@ -1,6 +1,6 @@
 {
   "name": "stateify",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "utility method for generating an immutable state object",
   "main": "index.js",
   "scripts": {

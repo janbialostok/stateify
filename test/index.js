@@ -99,6 +99,15 @@ describe('stateify', function () {
 			expect(state.date instanceof Date).to.be.true;
 		});
 	});
+	describe('Determining if value is a state using isState method', function () {
+		it('Should return false if value is not a state', () => {
+			expect(stateify.isState({})).to.be.false;
+		});
+		it('Should return true if value is a state', () => {
+			let state = stateify({});
+			expect(stateify.isState(state)).to.be.true;
+		});
+	});
 	describe('Setting fields to ignore', function () {
 		it('Should set a non-enumerable ignore property on a property', () => {
 			let ignoreExample = {

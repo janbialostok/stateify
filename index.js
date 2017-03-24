@@ -14,6 +14,12 @@ const isObject = function (value) {
   return false;
 };
 
+/**
+ * Convenience method of doing assignments on objects and will create objects that carry over prototypes for classes
+ * @param  {Boolean} isArray Denotes that an object is an array and therefore Array constructor should be used
+ * @param  {Object}  value   Any object that should be assigned
+ * @return {Object}          The reassigned object value
+ */
 const assign = function (isArray, value) {
   let assignments = [...arguments].slice(2);
   let isClass = (value && typeof value === 'object' && !isObject(value));
@@ -33,7 +39,7 @@ const assign = function (isArray, value) {
 const toObject = function (parent = {}) {
   let _parent = parent;
   let converted = Object.keys(_parent).reduce((result, key) => {
-    if (_parent[key] && _parent[key][SYMBOL_STATE] === '_state_') {
+    if (_parent[key] && isState(_parent[key])) {
       result[key] = _parent[key].toObject();
       result[key][SYMBOL_STATE] = false;
     }
@@ -63,12 +69,23 @@ const setIgnore = function (toIgnore = {}) {
 };
 
 /**
+ * Convenience method for determining if value is a "state", "state" Symbol is declared in global registry but is not known to end user
+ * @param  {*}  data Any value that should be evaluated
+ * @return {Boolean}      Returns true if value is a "state"
+ */
+const isState = function (data) {
+  if (!data) return false;
+  return (typeof data === 'object' && data[SYMBOL_STATE] === '_state_');
+};
+
+/**
  * Converts an object into an immutable "state" object which will never be directly manipulated but instead creates a new copy as necessary when a set, delete or get trap is triggered
  * @param {Object}  parent  The object to be converted
  * @param {Boolean} isArray Specifies that the object being converted is an Array. Must be true in order to properly handle arrays as they will be converted into non-iterable objects if isArray argument is not specified
  * @return {Object} Returns a "state" object which is a Proxy that indirectly accesses a copy of the initial object
  */
 const STATEIFY = function (parent = {}, isArray = false) {
+  if (isState(parent)) return parent;
   let _parent = assign(Array.isArray(parent), parent);
   _parent[SYMBOL_STATE] = '_state_';
   return new Proxy((isArray) ? [] : {}, {
@@ -77,7 +94,7 @@ const STATEIFY = function (parent = {}, isArray = false) {
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
       if (_parent[property] && typeof _parent[property] === 'object') {
-        if (_parent[property][SYMBOL_STATE] === '_state_' || _parent[property][SYMBOL_IGNORE]) return _parent[property];
+        if (isState(_parent[property]) || _parent[property][SYMBOL_IGNORE]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
         return _parent[property];
       }
@@ -99,3 +116,4 @@ const STATEIFY = function (parent = {}, isArray = false) {
 
 module.exports = STATEIFY;
 module.exports.setIgnore = setIgnore;
+module.exports.isState = isState;
