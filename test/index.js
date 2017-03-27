@@ -89,14 +89,19 @@ describe('stateify', function () {
 	describe('Immutability concerning classes', function () {
 		it('Should be able to handle classes without breaking prototype', () => {
 			let date = new Date();
-			let initial = { date, other: 'a' };
+			let Car = function (name) {
+				this.name = name;
+			};
+			let car = new Car();
+			let initial = { date, other: 'a', car };
 			let state = stateify(initial);
 			state.other = 'b';
 			state.date;
 			state = state.toObject();
 			expect(state.other).to.equal('b');
 			expect(state.other).to.not.equal(initial.other);
-			expect(state.date instanceof Date).to.be.true;
+			expect(typeof state.date === 'string').to.be.true;
+			expect(state.car instanceof Car).to.be.true;
 		});
 	});
 	describe('Determining if value is a state using isState method', function () {

@@ -93,6 +93,7 @@ const STATEIFY = function (parent = {}, isArray = false) {
       if (property === 'inspect') return _parent;
       if (property === 'toJSON') return () => JSON.stringify(_parent);
       if (property === 'toObject') return toObject.bind(null, _parent);
+      if (_parent[property] instanceof Date) _parent[property] = _parent[property].toJSON();
       if (_parent[property] && typeof _parent[property] === 'object') {
         if (isState(_parent[property]) || _parent[property][SYMBOL_IGNORE]) return _parent[property];
         _parent[property] = STATEIFY(_parent[property], Array.isArray(_parent[property]));
@@ -102,6 +103,7 @@ const STATEIFY = function (parent = {}, isArray = false) {
     },
     set: function (target, property, value) {
       if (property === 'inspect' || property === 'toJSON' || property === 'toObject') return true;
+      if (value instanceof Date) value = value.toJSON();
       _parent = assign(Array.isArray(_parent), _parent, { [property]: value });
       return true;
     },
