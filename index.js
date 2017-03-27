@@ -44,7 +44,7 @@ const toObject = function (parent = {}) {
       result[key][SYMBOL_STATE] = false;
     }
     else {
-      if (_parent[key] && typeof _parent[key] === 'object') {
+      if (_parent[key] && typeof _parent[key] === 'object' && !(_parent[key] instanceof Date)) {
         if (isObject(_parent[key])) result[key] = (Array.isArray(_parent[key])) ? Object.assign([], _parent[key]) : Object.assign({}, _parent[key]);
         else result[key] = assign(false, _parent[key]);
       }
